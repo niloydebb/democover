@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lab Report Index Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#F5F4EF;
+    --panel:#FFFFFF;
+    --ink:#16233F;
+    --ink-soft:#3F4A61;
+    --slate:#6B7280;
+    --line:#DEDCD2;
+    --blue:#1B4FA6;
+    --blue-deep:#123B84;
+    --green:#1F9E5C;
+    --danger:#C1432B;
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(22,35,63,0.04), 0 8px 24px -12px rgba(22,35,63,0.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 90% -10%, rgba(27,79,166,0.06), transparent),
+      radial-gradient(900px 400px at -10% 110%, rgba(31,158,92,0.06), transparent),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{
+    width:40px;height:40px;border-radius:10px;
+    background:linear-gradient(135deg, var(--blue) 0%, var(--blue) 52%, var(--green) 52%, var(--green) 100%);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:'Fraunces',serif;font-weight:700;font-size:18px;
+    box-shadow: var(--shadow);
+  }
+  .brand .name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:1.3rem;
+    letter-spacing:-0.01em;
+    line-height:1.1;
+  }
+  .brand .sub{
+    font-size:0.78rem;
+    color:var(--slate);
+    margin-top:2px;
+  }
+
+  .toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .toolbar .left{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toolbar .right{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border-radius:9px;
+    border:1.5px solid transparent;
+    font-weight:600;
+    font-size:0.86rem;
+    padding:9px 14px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  }
+  button:active{ transform:translateY(1px); }
+
+  .btn-add{
+    background:#fff;
+    border-color:var(--line);
+    color:var(--ink);
+  }
+  .btn-add:hover{ border-color:var(--blue); color:var(--blue-deep); }
+  .btn-add .plus-icon{
+    width:18px;height:18px;border-radius:50%;
+    background:var(--blue);
+    color:#fff;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:14px; font-weight:700; line-height:1;
+  }
+
+  .btn-primary{
+    background:linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+    color:#fff;
+    box-shadow: 0 8px 18px -8px rgba(18,59,132,0.5);
+  }
+  .btn-primary:hover{ transform:translateY(-1px); }
+
+  .btn-outline{
+    background:#fff;
+    border-color:var(--blue);
+    color:var(--blue-deep);
+  }
+  .btn-outline:hover{ background:rgba(27,79,166,0.06); }
+
+  .status-line{
+    width:100%;
+    text-align:center;
+    font-size:0.78rem;
+    color:var(--slate);
+    margin-top:2px;
+    min-height:16px;
+  }
+  .status-line.error{ color:var(--danger); font-weight:600; }
+  .status-line.ok{ color:#167E48; font-weight:600; }
+
+  .field-inline{
+    display:flex; align-items:center; gap:8px;
+    font-size:0.82rem; color:var(--ink-soft); font-weight:600;
+  }
+  .field-inline input{
+    font-family:'Times New Roman', Georgia, serif;
+    font-size:0.95rem;
+    padding:6px 9px;
+    border-radius:7px;
+    border:1.5px solid var(--line);
+    min-width:160px;
+  }
+  .field-inline input:focus{ outline:none; border-color:var(--blue); }
+
+  /* ---- The paper / WYSIWYG index sheet ---- */
+  .paper-outer{
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow: var(--shadow);
+    padding:16px;
+  }
+  .paper{
+    background:#fff;
+    border:1px solid var(--line);
+    width:100%;
+    aspect-ratio:210/297;
+    padding:14mm 18mm;
+    font-family:'Times New Roman', Georgia, serif;
+    color:#111;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .paper .title{
+    text-align:center;
+    font-weight:700;
+    font-size:clamp(18px, 3.4vw, 26px);
+    margin:0 0 4px;
+    letter-spacing:0.02em;
+  }
+  .paper .subtitle-wrap{
+    text-align:center;
+    margin-bottom:6%;
+  }
+  .paper .subtitle-input{
+    font-family:'Times New Roman', Georgia, serif;
+    text-align:center;
+    font-size:clamp(12px, 2vw, 15px);
+    border:none;
+    border-bottom:1px dashed transparent;
+    background:transparent;
+    color:#111;
+    padding:2px 4px;
+    width:60%;
+    max-width:260px;
+  }
+  .paper .subtitle-input:hover, .paper .subtitle-input:focus{
+    border-bottom:1px dashed var(--line);
+    outline:none;
+  }
+  table.index-table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Arial', 'Helvetica', sans-serif;
+    font-size:clamp(9px, 1.6vw, 12px);
+    table-layout:fixed;
+  }
+  table.index-table th, table.index-table td{
+    border:1px solid #222;
+    padding:5px 6px;
+    vertical-align:top;
+  }
+  table.index-table th{
+    background:#F4F3EE;
+    font-weight:700;
+    text-align:center;
+    font-size:1.02em;
+  }
+  table.index-table col.col-no{ width:14%; }
+  table.index-table col.col-name{ width:66%; }
+  table.index-table col.col-page{ width:15%; }
+  table.index-table col.col-actions{ width:5%; }
+  table.index-table td.no-cell, table.index-table td.page-cell{
+    text-align:center;
+  }
+  table.index-table .no-input, table.index-table .page-input{
+    width:100%;
+    border:none;
+    background:transparent;
+    text-align:center;
+    font-family:inherit;
+    font-size:1em;
+    color:inherit;
+    padding:2px;
+  }
+  table.index-table .no-input:focus, table.index-table .page-input:focus{
+    outline:1px dashed var(--blue);
+    border-radius:2px;
+  }
+  table.index-table .name-input{
+    width:100%;
+    min-height:1.4em;
+    outline:none;
+    line-height:1.35;
+    padding:1px 2px;
+  }
+  table.index-table .name-input:empty::before{
+    content: attr(data-placeholder);
+    color:#B0AFA8;
+  }
+  table.index-table .name-input:focus{
+    outline:1px dashed var(--blue);
+    border-radius:2px;
+  }
+  td.actions-cell{
+    text-align:center;
+    border:none !important;
+    padding:0 !important;
+    vertical-align:middle;
+  }
+  .del-row-btn{
+    width:22px; height:22px;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--danger);
+    font-size:13px;
+    font-weight:700;
+    padding:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+  }
+  .del-row-btn:hover{ background:rgba(193,67,43,0.08); border-color:var(--danger); }
+
+  .empty-state{
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    color:var(--slate);
+    font-size:0.85rem;
+    padding:24px 0;
+  }
+
+  .note-box{
+    font-size:0.78rem;
+    color:var(--slate);
+    background:#FBFAF6;
+    border:1px dashed var(--line);
+    border-radius:10px;
+    padding:11px 14px;
+    margin-top:14px;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="mark">I</div>
+      <div>
+        <div class="name">Lab Report Index Generator</div>
+        <div class="sub">Build the index page, then download or print it</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="left">
+      <label class="field-inline">
+        Subtitle
+        <input type="text" id="subtitleInput" value="Lab Report" />
+      </label>
+    </div>
+    <div class="right">
+      <button type="button" class="btn-add" id="addRowBtn">
+        <span class="plus-icon">+</span> Add Row
+      </button>
+    </div>
+  </div>
+
+  <div class="paper-outer">
+    <div class="paper" id="paperEl">
+      <div class="title">INDEX</div>
+      <div class="subtitle-wrap">
+        <span id="subtitleDisplay" style="font-family:'Times New Roman', Georgia, serif; font-size:clamp(12px, 2vw, 15px);">Lab Report</span>
+      </div>
+      <table class="index-table">
+        <colgroup>
+          <col class="col-no"><col class="col-name"><col class="col-page"><col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Exp. No.</th>
+            <th>Experiment Name</th>
+            <th>Page No.</th>
+            <th class="actions-cell" style="border:none;"></th>
+          </tr>
+        </thead>
+        <tbody id="indexBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="toolbar" style="margin-top:16px;">
+    <div class="left"></div>
+    <div class="right">
+      <button type="button" class="btn-outline" id="printBtn">Print</button>
+      <button type="button" class="btn-primary" id="downloadBtn">Download PDF</button>
+      
+    </div>
+    
+    <div class="status-line" id="statusLine"><p class="hint_msg">Need a Cover Page? <a href="index.html" target="_blank">Click Here</a></p></div>
+  </div>
+
+  <div class="note-box"><b>Tip:</b> click directly into the table to edit — Exp. No. auto-fills the next number when you add a row, but you can change any value.</div>
+   
+    <p style="text-align: center;">Generate Fast | Work Smart | Design and Develop By <a href="https://www.facebook.com/niloydebb/" target="_blank" style="text-decoration:none;"><span style="color: lightseagreen;">Niloy</span></a></p>
+
+</div>
+
+
+
+<script>
+const $ = (id) => document.getElementById(id);
+const indexBody = $('indexBody');
+const subtitleInput = $('subtitleInput');
+const subtitleDisplay = $('subtitleDisplay');
+const statusLine = $('statusLine');
+
+subtitleInput.addEventListener('input', () => {
+  subtitleDisplay.textContent = subtitleInput.value.trim() || 'Lab Report';
+});
+
+/* ============================================================
+   Row management
+   ============================================================ */
+function nextExpNo(){
+  let max = 0;
+  document.querySelectorAll('.no-input').forEach(inp => {
+    const v = parseInt(inp.value, 10);
+    if (!isNaN(v) && v > max) max = v;
+  });
+  return max + 1;
+}
+
+function capitalizeFirst(str){
+  const trimmed = str.replace(/^\s+/, '');
+  if (!trimmed) return str;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function addRow(prefillNo, focusName){
+  const tr = document.createElement('tr');
+
+  const tdNo = document.createElement('td');
+  tdNo.className = 'no-cell';
+  const noInput = document.createElement('input');
+  noInput.type = 'text';
+  noInput.inputMode = 'numeric';
+  noInput.className = 'no-input';
+  noInput.value = prefillNo !== undefined ? prefillNo : nextExpNo();
+  tdNo.appendChild(noInput);
+
+  const tdName = document.createElement('td');
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'name-input';
+  nameDiv.contentEditable = 'true';
+  nameDiv.setAttribute('data-placeholder', 'Write the experiment name…');
+  nameDiv.addEventListener('blur', () => {
+    const text = nameDiv.innerText;
+    const capitalized = capitalizeFirst(text);
+    if (capitalized !== text) {
+      nameDiv.innerText = capitalized;
+    }
+  });
+  nameDiv.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); nameDiv.blur(); }
+  });
+  tdName.appendChild(nameDiv);
+
+  const tdPage = document.createElement('td');
+  tdPage.className = 'page-cell';
+  const pageInput = document.createElement('input');
+  pageInput.type = 'text';
+  pageInput.inputMode = 'numeric';
+  pageInput.className = 'page-input';
+  tdPage.appendChild(pageInput);
+
+  const tdActions = document.createElement('td');
+  tdActions.className = 'actions-cell';
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'del-row-btn';
+  delBtn.title = 'Remove row';
+  delBtn.innerHTML = '&times;';
+  delBtn.addEventListener('click', () => {
+    tr.remove();
+    if (!indexBody.querySelector('tr')) {
+      addRow(1, false);
+    }
+  });
+  tdActions.appendChild(delBtn);
+
+  tr.appendChild(tdNo);
+  tr.appendChild(tdName);
+  tr.appendChild(tdPage);
+  tr.appendChild(tdActions);
+  indexBody.appendChild(tr);
+
+  if (focusName) {
+    nameDiv.focus();
+  }
+  return tr;
+}
+
+$('addRowBtn').addEventListener('click', () => {
+  addRow(nextExpNo(), true);
+});
+
+// seed with one row
+addRow(1, false);
+
+/* ============================================================
+   Collect data from the table
+   ============================================================ */
+function collectRows(){
+  const rows = [];
+  indexBody.querySelectorAll('tr').forEach(tr => {
+    const no = tr.querySelector('.no-input').value.trim();
+    const nameEl = tr.querySelector('.name-input');
+    let name = capitalizeFirst(nameEl.innerText.trim());
+    const page = tr.querySelector('.page-input').value.trim();
+    if (no || name || page) {
+      rows.push({ no, name, page });
+    }
+  });
+  return rows;
+}
+
+/* ============================================================
+   PDF generation — mirrors the on-screen table styling
+   ============================================================ */
+function generateIndexPDF(subtitle, rows){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210, pageH = 297;
+  const marginX = 20, marginTop = 22, marginBottom = 22;
+  const contentW = pageW - marginX * 2;
+  const colNoW = 24, colPageW = 26;
+  const colNameW = contentW - colNoW - colPageW;
+  let y = marginTop;
+
+  doc.setTextColor(15, 15, 15);
+  doc.setFont('times', 'bold');
+  doc.setFontSize(22);
+  doc.text('INDEX', pageW / 2, y, { align: 'center' });
+  y += 8;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(13);
+  doc.text(subtitle || 'Lab Report', pageW / 2, y, { align: 'center' });
+  y += 12;
+
+  const headH = 10;
+  const cellPad = 3;
+  const lineH = 4.6;
+
+  function drawHeaderRow(){
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(0.3);
+    doc.setFillColor(244, 243, 238);
+    doc.rect(marginX, y, colNoW, headH, 'FD');
+    doc.rect(marginX + colNoW, y, colNameW, headH, 'FD');
+    doc.rect(marginX + colNoW + colNameW, y, colPageW, headH, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(15, 15, 15);
+    doc.text('Exp. No.', marginX + colNoW / 2, y + headH / 2 + 1.4, { align: 'center' });
+    doc.text('Experiment Name', marginX + colNoW + colNameW / 2, y + headH / 2 + 1.4, { align: 'center' });
+    doc.text('Page No.', marginX + colNoW + colNameW + colPageW / 2, y + headH / 2 + 1.4, { align: 'center' });
+    y += headH;
+  }
+
+  drawHeaderRow();
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+
+  rows.forEach((row) => {
+    const nameLines = doc.splitTextToSize(row.name || '', colNameW - cellPad * 2);
+    const linesCount = Math.max(nameLines.length, 1);
+    const rowH = Math.max(10, linesCount * lineH + cellPad * 1.7);
+
+    if (y + rowH > pageH - marginBottom) {
+      doc.addPage();
+      y = marginTop;
+      drawHeaderRow();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+    }
+
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(0.3);
+    doc.rect(marginX, y, colNoW, rowH);
+    doc.rect(marginX + colNoW, y, colNameW, rowH);
+    doc.rect(marginX + colNoW + colNameW, y, colPageW, rowH);
+
+    doc.setTextColor(15, 15, 15);
+    doc.text(String(row.no || ''), marginX + colNoW / 2, y + rowH / 2 + 1.3, { align: 'center' });
+    doc.text(nameLines, marginX + colNoW + cellPad, y + cellPad + 3.2);
+    doc.text(String(row.page || ''), marginX + colNoW + colNameW + colPageW / 2, y + rowH / 2 + 1.3, { align: 'center' });
+
+    y += rowH;
+  });
+
+  return doc;
+}
+
+function sanitizeForFilename(str){
+  return String(str).trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_');
+}
+
+/* ============================================================
+   Buttons: Download & Print
+   ============================================================ */
+$('downloadBtn').addEventListener('click', () => {
+  statusLine.textContent = '';
+  statusLine.className = 'status-line';
+  const rows = collectRows();
+  if (rows.length === 0) {
+    statusLine.textContent = 'Add at least one row before generating.';
+    statusLine.className = 'status-line error';
+    return;
+  }
+  try {
+    const subtitle = subtitleInput.value.trim() || 'Lab Report';
+    const doc = generateIndexPDF(subtitle, rows);
+    const filename = (sanitizeForFilename(subtitle) || 'Lab_Report') + '_Index.pdf';
+    doc.save(filename);
+    statusLine.textContent = 'Downloaded ' + filename;
+    statusLine.className = 'status-line ok';
+  } catch (err) {
+    console.error(err);
+    statusLine.textContent = 'Something went wrong while creating the PDF. Please try again.';
+    statusLine.className = 'status-line error';
+  }
+});
+
+$('printBtn').addEventListener('click', () => {
+  statusLine.textContent = '';
+  statusLine.className = 'status-line';
+  const rows = collectRows();
+  if (rows.length === 0) {
+    statusLine.textContent = 'Add at least one row before printing.';
+    statusLine.className = 'status-line error';
+    return;
+  }
+  try {
+    const subtitle = subtitleInput.value.trim() || 'Lab Report';
+    const doc = generateIndexPDF(subtitle, rows);
+    doc.autoPrint();
+    const blobUrl = doc.output('bloburl');
+    const printWindow = window.open(blobUrl, '_blank');
+    if (!printWindow) {
+      statusLine.textContent = 'Please allow pop-ups to print the PDF.';
+      statusLine.className = 'status-line error';
+    } else {
+      statusLine.textContent = 'Opened the print dialog in a new tab.';
+      statusLine.className = 'status-line ok';
+    }
+  } catch (err) {
+    console.error(err);
+    statusLine.textContent = 'Something went wrong while preparing to print. Please try again.';
+    statusLine.className = 'status-line error';
+  }
+});
+</script>
+</body>
+</html>
